@@ -261,7 +261,8 @@ class sphero_mini():
 
         '''
         sendBytes = [sendPacketConstants["StartOfPacket"],
-                    sum([flags["resetsInactivityTimeout"], flags["requestsResponse"]]),
+                    flags["requestsResponse"],
+                    #sum([flags["resetsInactivityTimeout"], flags["requestsResponse"]]),
                     devID,
                     commID,
                     self.sequence] + payload # concatenate payload list
