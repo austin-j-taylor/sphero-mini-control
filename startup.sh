@@ -1,13 +1,13 @@
 #!/bin/sh
 
 
-#rfkill unblock bluetooth
+rfkill unblock bluetooth
 # Turn on bluetooth
-#sudo bluetoothctl power on
-#sudo bluetoothctl agent on
-#sudo bluetoothctl default-agent
-#sudo bluetoothctl discoverable on
-#sudo bluetoothctl pairable on
+sudo bluetoothctl power on
+sudo bluetoothctl agent on
+sudo bluetoothctl default-agent
+sudo bluetoothctl discoverable on
+sudo bluetoothctl pairable on
 #echo "bluetooth activated."
 
 #sudo bluetoothctl remove 74:F9:CA:4B:21:6C
@@ -32,11 +32,20 @@
 #	echo "not yet connected..."
 #done
 #echo "connected"
-
-#su pi -c 'python3 /home/pi/Desktop/spheroControl/spheroBluetoothController.py &'
-#su pi -c 'python3 /home/pi/Desktop/spheroControl/switchProControl.py &'
-
-while :
+#whoami
+#sleep 1
+python3 ~/Desktop/spheroControl/spheroSwitchProController.py
+until python3 ~/Desktop/spheroControl/spheroSwitchProController.py
 do
-	python3 /home/pi/Desktop/spheroControl/switchProControl.py
+	echo "Running the script again."
+	sleep 1
+	until sudo bluetoothctl connect 74:F9:CA:4B:21:6C
+	do
+		sleep 1
+		echo "not yet connected..."
+	done
+	echo "connected"
 done
+
+echo "Script has finally ended. Shutting down the pi."
+sudo shutdown -P now

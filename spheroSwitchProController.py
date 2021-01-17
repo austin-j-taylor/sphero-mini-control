@@ -12,7 +12,7 @@ MAC_ball = "CE:F0:E9:F4:9F:C3"
 
 # time to sleep between commands to make sure they're not skipped
 deltaTime = 1.0/30
-deltaTimeLong = 1.0/6
+deltaTimeLong = deltaTime  *6
 # joystick deadband
 deadband = 15
 
@@ -27,6 +27,7 @@ controllerStickMaxRY = 3560
 
 # Global so we can turn off lights in our exit callback
 joycon = 0
+sphero = 0
 
 # Switch Pro Controller functions
 
@@ -45,15 +46,16 @@ def set_home_light(joycon, brightness):
     )
 
 def exit_handler():
+    disconnect()
     disconnectController()
 
 def disconnectController():
     global joycon
     if(joycon != 0):
-        #joycon.disconnect_device()
-        set_home_light(joycon, 0)
-        time.sleep(deltaTimeLong)
-        joycon.set_player_lamp_flashing(0x8)
+        joycon.disconnect_device()
+        #set_home_light(joycon, 0)
+        #time.sleep(deltaTimeLong)
+        #joycon.set_player_lamp_flashing(0x8)
     print("Disconnected.")
 
     
@@ -93,32 +95,33 @@ def scaleRightStickY(value):
 
 # Sphero functions
 def connect():
+    global sphero
     print("Connecting...")
-    # Connect:
     sphero = sphero_mini.sphero_mini(MAC_ball, verbosity = 1, waitForResponse = False)
     sphero.setLEDColor(red = 255, green = 255, blue = 255)
     sphero.resetHeading() # Reset heading
     print("Connected.")
-    return sphero
     
-def disconnect(sphero):
-    print("Disconnecting from ball...")
-    sphero.setLEDColor(red = 255, green = 0, blue = 0)
-    sphero.resetHeading() # Reset heading
-    sphero.roll(0,0)
-    sphero.sleep()
-    sphero.setLEDColor(red = 0, green = 0, blue = 0)
-    sphero.disconnect()
-    print("Disconnected from ball.")
+def disconnect():
+    global sphero
+    if(sphero != 0):
+        print("Disconnecting from ball...")
+        sphero.setLEDColor(red = 255, green = 0, blue = 0)
+        sphero.resetHeading() # Reset heading
+        sphero.roll(0,0)
+        sphero.sleep()
+        sphero.setLEDColor(red = 0, green = 0, blue = 0)
+        sphero.disconnect()
+        print("Disconnected from ball.")
+        sphero = 0
 
 
 def MainProgram():
-    sphero = 0
     connected = False
     staring = False # "staring" means the ball is constantly setting its heading to where it's facing
     sprinting = False
     start = time.time()
-    global joycon
+    global sphero, joycon
     
     # Attempt to connect to the controller
     joycon_id = get_PRO_id()
@@ -127,16 +130,27 @@ def MainProgram():
     atexit.register(exit_handler)
 
     print("Pro Controller found: %s" % (joycon_id,))
-    time.sleep(deltaTime)
+    time.sleep(deltaTimeLong)
     joycon.set_player_lamp_on(0x1)
-    time.sleep(deltaTime * 5)
+    time.sleep(deltaTimeLong)
+    print("Battery: %i" % joycon.battery_level)
+    if(joycon.battery_level == 0):
+        joycon.set_player_lamp_on(0x8)
+        exit(1)
+        
     set_home_light(joycon, 20)
-    time.sleep(deltaTime)
-    
+        
+        
+        
     while 1:
         time.sleep(deltaTime)
         
         try:
+            # End
+            if(joycon.minus):
+                exit(0)
+            if(joycon.plus):
+                exit(1)
             # Sprinting, staring states
             sprinting = joycon.a
             if(connected):
@@ -160,14 +174,14 @@ def MainProgram():
             scaledRY = scaleRightStickY(joycon.stick_r[1])
             
             #print("Left  speed: %i angle: %i" % (getSpeed(scaledX, scaledY, sprinting), getAngle(scaledX, scaledY)))
-            print("Right speed: %i angle: %i" % (getSpeed(scaledRX, scaledRY, sprinting), getAngle(scaledRX, scaledRY)))
+            #print("Right speed: %i angle: %i" % (getSpeed(scaledRX, scaledRY, sprinting), getAngle(scaledRX, scaledRY)))
             # Connected status
             if(connected):
                 if(joycon.home):
                     set_home_light(joycon, 5)
                     time.sleep(deltaTimeLong)
                     joycon.set_player_lamp_flashing(0x3)
-                    disconnect(sphero) 
+                    disconnect() 
                     set_home_light(joycon, 20)
                     time.sleep(deltaTimeLong)
                     joycon.set_player_lamp_on(0x1)
@@ -186,7 +200,7 @@ def MainProgram():
                     set_home_light(joycon, 5)
                     time.sleep(deltaTimeLong)
                     joycon.set_player_lamp_flashing(0x3)
-                    sphero = connect()  
+                    connect()  
                     set_home_light(joycon, 100)
                     time.sleep(deltaTimeLong)
                     joycon.set_player_lamp_on(0x3)
@@ -194,6 +208,7 @@ def MainProgram():
         except btle.BTLEInternalError:
             print("Lost connection with ball.")
             connected = False
+            sphero = 0
     
 
 if __name__ == '__main__':
