@@ -120,6 +120,7 @@ def MainProgram():
     connected = False
     staring = False # "staring" means the ball is constantly setting its heading to where it's facing
     sprinting = False
+    lastHeading = 90
     start = time.time()
     global sphero, joycon
     
@@ -191,10 +192,13 @@ def MainProgram():
                     if(time.time() - start > .1):
                         start = time.time()
                         if(staring):
-                            if(scaledRX != 0 and scaledRY != 0):
-                                sphero.roll(0, getAngle(scaledRX, scaledRY))
+                            if(scaledRX != 0 or scaledRY != 0):
+                                lastHeading = getAngle(scaledRX, scaledRY)
+                            sphero.roll(0, lastHeading)
                         else:
-                            sphero.roll(getSpeed(scaledX, scaledY, sprinting), getAngle(scaledX, scaledY))
+                            if(scaledX != 0 or scaledY != 0):
+                                lastHeading = getAngle(scaledX, scaledY)
+                            sphero.roll(getSpeed(scaledX, scaledY, sprinting), lastHeading)
             else:
                 if(joycon.home):
                     set_home_light(joycon, 5)
